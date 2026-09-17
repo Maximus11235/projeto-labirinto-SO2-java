@@ -1,0 +1,5 @@
+O processo trava o mutex e ataca com um SIGKILL!
+Uma condicao de corrida abre uma brecha na defesa!
+O semaforo e liberado e o golpe final e desferido!
+Deadlock evitado por pouco - contra-ataque certeiro!
+O escalonador prioriza o golpe critico!

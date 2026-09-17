@@ -1,49 +1,59 @@
-package src.main.mechanics;
+package mechanics;
 
-// mechanics/BattleAutomaton.java
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * BattleAutomaton — máquina de estados finitos simples. Lê a lista de
+ * falas de golpe de resources/fsm/automaton.txt uma única vez, na
+ * inicialização, e depois apenas cicla por elas a cada colisão.
+ *
+ * Como várias threads de ProcessMonster podem colidir com o Hero em
+ * momentos próximos, nextMove() usa um AtomicInteger para ser thread-safe
+ * sem precisar de um bloco synchronized.
+ */
 public class BattleAutomaton {
-    private List<String> states; // As frases de golpe
-    private int currentStateIndex = 0;
 
-    public BattleAutomaton(String filePath) {
-        states = new ArrayList<>();
-        loadAutomaton(filePath);
-    }
+    private final List<String> moves = new ArrayList<>();
+    private final AtomicInteger cursor = new AtomicInteger(0);
 
-    private void loadAutomaton(String filePath) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+    public BattleAutomaton(String path) {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(path))) {
             String line;
-            while ((line = br.readLine()) != null) {
-                if (!line.trim().isEmpty()) {
-                    states.add(line.trim());
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    moves.add(line);
                 }
             }
         } catch (IOException e) {
-            System.err.println("Erro ao carregar FSM: " + e.getMessage());
-            // Fallback default
-            states.add("Iniciando execução...");
-            states.add("Processando dados pesados...");
-            states.add("Golpe fatal na cabeça! Processo encerrado.");
+            System.out.println("[BattleAutomaton] Não foi possível ler '" + path
+                    + "'. Usando golpes padrão.");
+        }
+        if (moves.isEmpty()) {
+            moves.addAll(defaultMoves());
         }
     }
 
-    // Chamado pela thread do monstro/herói a cada turno da batalha
-    public String executeNextTurn() {
-        if (isFinished()) {
-            return null;
-        }
-        String log = states.get(currentStateIndex);
-        currentStateIndex++;
-        return log;
+    private List<String> defaultMoves() {
+        return Arrays.asList(
+                "O processo trava o mutex e ataca com um SIGKILL!",
+                "Uma condição de corrida abre uma brecha na defesa!",
+                "O semáforo é liberado e o golpe final é desferido!",
+                "Deadlock evitado por pouco — contra-ataque certeiro!",
+                "O escalonador prioriza o golpe crítico!"
+        );
     }
 
-    public boolean isFinished() {
-        return currentStateIndex >= states.size();
+    /** Retorna a próxima fala/golpe, ciclando pela lista. Thread-safe. */
+    public String nextMove() {
+        int index = cursor.getAndIncrement() % moves.size();
+        return moves.get(index);
     }
 }

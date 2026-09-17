@@ -1,31 +1,56 @@
-package src.main.core;
+package core;
 
-// core/GameEngine.java
+/**
+ * GameEngine — o "Sistema Operacional" do jogo.
+ *
+ * Centraliza o estado global (rodando / pausado) e o monitor usado para
+ * suspender e acordar todas as threads de ProcessMonster de uma vez,
+ * sem busy waiting (nenhuma thread fica em loop apertado verificando
+ * uma flag — todas dormem em wait() até serem notificadas).
+ */
 public class GameEngine {
+
     private final Object pauseLock = new Object();
-    private volatile boolean isPaused = false;
-    private volatile boolean isRunning = true;
+    private volatile boolean running = true;
+    private volatile boolean paused = false;
 
-    // Acionado pela tecla de pausa (ex: 'P' ou 'ESC')
+    public boolean isRunning() {
+        return running;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    /** Alterna entre pausado/rodando e acorda todas as threads em espera. */
     public void togglePause() {
-        isPaused = !isPaused;
-        if (!isPaused) {
-            synchronized (pauseLock) {
-                pauseLock.notifyAll(); // Acorda todos os processos simultaneamente
+        synchronized (pauseLock) {
+            paused = !paused;
+            if (!paused) {
+                pauseLock.notifyAll();
             }
         }
     }
 
-    // Deve ser chamado dentro do loop (run) de TODAS as threads em background
-    public void checkPause() throws InterruptedException {
+    /**
+     * Chamado pelas threads de background (ProcessMonster) a cada ciclo.
+     * Bloqueia a thread chamadora enquanto o jogo estiver pausado, sem
+     * consumir CPU, e retorna assim que o jogo for retomado ou encerrado.
+     */
+    public void awaitIfPaused() throws InterruptedException {
         synchronized (pauseLock) {
-            // O while previne o problema de "spurious wakeups" (despertares falsos)
-            while (isPaused) {
-                pauseLock.wait(); 
+            while (paused && running) {
+                pauseLock.wait();
             }
         }
     }
-    
-    public boolean isRunning() { return isRunning; }
-    public void stopGame() { this.isRunning = false; }
+
+    /** Encerra o jogo e acorda qualquer thread presa em pausa para que possa sair do loop. */
+    public void shutdown() {
+        running = false;
+        synchronized (pauseLock) {
+            paused = false;
+            pauseLock.notifyAll();
+        }
+    }
 }
