@@ -1,8 +1,8 @@
 package src.main;
+
 import src.main.core.*;
 import src.main.ui.*;
 import src.main.entities.*;
-// Main.java
 import javax.swing.SwingUtilities;
 
 public class Main {
@@ -22,8 +22,8 @@ public class Main {
             ui.addKeyListener(hero.getInputListener());
             ui.setFocusable(true); // Obrigatório para receber eventos de teclado
 
-            // Exemplo de criação de um monstro
-            ProcessMonster monster1 = new ProcessMonster(5, 5, engine, ui);
+            // Criação de um monstro repassando mapLoader no construtor
+            ProcessMonster monster1 = new ProcessMonster(5, 5, mapLoader, engine, ui);
             Thread monsterThread = new Thread(monster1);
             monsterThread.start();
 
