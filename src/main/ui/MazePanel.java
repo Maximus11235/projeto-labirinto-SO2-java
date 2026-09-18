@@ -16,6 +16,7 @@ import java.util.List;
 public class MazePanel extends JPanel {
 
     private static final int CELL_SIZE = 32;
+    private static final String BONES_SPRITE_PATH = "resources/sprites/ossos.png";
 
     private static final Color WALL_COLOR = new Color(40, 40, 40);
     private static final Color FLOOR_COLOR = new Color(235, 235, 235);
@@ -27,6 +28,7 @@ public class MazePanel extends JPanel {
     private final Hero hero;
     private final List<ProcessMonster> monsters;
     private final JLabel[][] cells;
+    private final ImageIcon bonesIcon;
 
     public MazePanel(MapLoader mapLoader, Hero hero, List<ProcessMonster> monsters) {
         this.mapLoader = mapLoader;
@@ -44,13 +46,35 @@ public class MazePanel extends JPanel {
             for (int c = 0; c < cols; c++) {
                 JLabel cell = new JLabel();
                 cell.setOpaque(true);
+                cell.setHorizontalAlignment(SwingConstants.CENTER);
+                cell.setVerticalAlignment(SwingConstants.CENTER);
                 cell.setPreferredSize(new Dimension(CELL_SIZE, CELL_SIZE));
                 cells[r][c] = cell;
                 add(cell);
             }
         }
 
+        bonesIcon = loadBonesIcon();
+
         refresh();
+    }
+
+    /**
+     * Carrega resources/sprites/ossos.png e a redimensiona para o tamanho
+     * da célula. Se o arquivo não existir ou não puder ser lido, retorna
+     * null e os processos derrotados simplesmente somem do labirinto,
+     * como antes.
+     */
+    private ImageIcon loadBonesIcon() {
+        java.io.File file = new java.io.File(BONES_SPRITE_PATH);
+        if (!file.exists()) {
+            System.out.println("[MazePanel] '" + BONES_SPRITE_PATH
+                    + "' não encontrado. Processos derrotados ficarão apenas ausentes.");
+            return null;
+        }
+        Image image = new ImageIcon(file.getPath()).getImage();
+        Image scaled = image.getScaledInstance(CELL_SIZE, CELL_SIZE, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaled);
     }
 
     /**
@@ -73,23 +97,29 @@ public class MazePanel extends JPanel {
                     color = FLOOR_COLOR;
                 }
                 cells[r][c].setBackground(color);
+                cells[r][c].setIcon(null); // limpa ossos de um refresh anterior antes de redesenhar
             }
         }
 
         for (ProcessMonster monster : monsters) {
-            if (!monster.isAlive()) {
-                continue; // já derrotado/finalizado: não ocupa mais uma célula
-            }
             int r = monster.getRow();
             int c = monster.getCol();
-            if (withinBounds(r, c, rows, cols)) {
+            if (!withinBounds(r, c, rows, cols)) {
+                continue;
+            }
+            if (monster.isAlive()) {
                 cells[r][c].setBackground(MONSTER_COLOR);
+            } else if (bonesIcon != null) {
+                // processo derrotado: mantém a cor de chão/saída por baixo
+                // e desenha os ossos por cima, no lugar onde ele "morreu".
+                cells[r][c].setIcon(bonesIcon);
             }
         }
 
         int heroRow = hero.getRow();
         int heroCol = hero.getCol();
         if (withinBounds(heroRow, heroCol, rows, cols)) {
+            cells[heroRow][heroCol].setIcon(null); // o herói cobre quaisquer ossos na própria célula
             cells[heroRow][heroCol].setBackground(HERO_COLOR);
         }
 
