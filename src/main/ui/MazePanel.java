@@ -77,6 +77,9 @@ public class MazePanel extends JPanel {
         }
 
         for (ProcessMonster monster : monsters) {
+            if (!monster.isAlive()) {
+                continue; // já derrotado/finalizado: não ocupa mais uma célula
+            }
             int r = monster.getRow();
             int c = monster.getCol();
             if (withinBounds(r, c, rows, cols)) {

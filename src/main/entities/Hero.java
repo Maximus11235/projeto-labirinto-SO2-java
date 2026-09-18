@@ -3,6 +3,7 @@ package entities;
 import core.MapLoader;
 
 import java.awt.event.KeyEvent;
+import java.util.List;
 
 /**
  * Hero — representa o jogador, controlado pelo teclado.
@@ -32,6 +33,13 @@ public class Hero extends Entity {
     private ExitListener exitListener;
     private BlockedExitListener blockedExitListener;
 
+    // Referência viva à lista de processos (preenchida pelo Main depois
+    // que os monstros são criados). Usada só para detectar colisão
+    // quando é o HERÓI quem se move para cima de um processo — a
+    // detecção no sentido contrário (processo se move para cima do
+    // herói) continua acontecendo dentro do próprio ProcessMonster.
+    private List<ProcessMonster> monsters;
+
     public Hero(MapLoader mapLoader, int tasksRequired) {
         super(mapLoader.getStartRow(), mapLoader.getStartCol());
         this.mapLoader = mapLoader;
@@ -44,6 +52,11 @@ public class Hero extends Entity {
 
     public void setBlockedExitListener(BlockedExitListener listener) {
         this.blockedExitListener = listener;
+    }
+
+    /** Deve ser chamado pelo Main assim que a lista de processos existir. */
+    public void setMonsters(List<ProcessMonster> monsters) {
+        this.monsters = monsters;
     }
 
     /** Chamado por um ProcessMonster derrotado ao concluir sua "tarefa". */
@@ -97,7 +110,24 @@ public class Hero extends Entity {
         }
 
         setPosition(newRow, newCol);
+        checkMonsterCollision(newRow, newCol);
         checkExit(newRow, newCol);
+    }
+
+    /**
+     * Depois que o herói se move, verifica se ele acabou de pisar na
+     * posição atual de algum processo vivo. Se sim, dispara a batalha
+     * imediatamente — sem precisar esperar o processo se mover de novo.
+     */
+    private void checkMonsterCollision(int row, int col) {
+        if (monsters == null) {
+            return;
+        }
+        for (ProcessMonster monster : monsters) {
+            if (monster.isAlive() && monster.getRow() == row && monster.getCol() == col) {
+                monster.engageBattle();
+            }
+        }
     }
 
     /** Reservado para movimento contínuo (segurar tecla); no-op no modelo passo-a-passo atual. */

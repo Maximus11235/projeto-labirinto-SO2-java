@@ -40,6 +40,7 @@ public class Main {
         // lista em si), mas usamos uma coleção segura para concorrência
         // por robustez caso o design evolua para adicionar/remover monstros.
         List<ProcessMonster> monsters = new CopyOnWriteArrayList<>();
+        hero.setMonsters(monsters); // permite ao herói detectar colisão ao se mover sobre um processo
 
         MazePanel mazePanel = new MazePanel(mapLoader, hero, monsters);
         TerminalPanel terminalPanel = new TerminalPanel();
